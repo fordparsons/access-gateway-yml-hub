@@ -1,0 +1,78 @@
+version: '2'
+services:
+
+  access-gateway:
+    image: duosecurity/access-gateway@sha256:8ff64787eca9c9d671f2f333ae1e6e00e73ff7a38fb21819802f9a0e28118db7
+    ports:
+    - "4443"
+    - "8443"
+    container_name: access-gateway
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "20"
+    env_file:
+    - ./access-gateway.env
+    volumes:
+    - data:/data/
+    labels:
+      com.duo.access-gateway.builder.version: "d0c1c820"
+      com.duo.access-gateway.code.version: "v1.5.1"
+      com.duo.access-gateway.built: "Thu, 31 Aug 2017 19:53:40 -0000"
+
+  nginx_proxy:
+    image: jwilder/nginx-proxy
+    ports:
+    - "80:80"
+    - "443:443"
+    - "8443:8443"
+    container_name: nginx_proxy
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "20"
+    volumes:
+    - /var/nginx/certs:/etc/nginx/certs:ro
+    - /var/nginx/vhost.d:/etc/nginx/vhost.d
+    - /usr/share/nginx/html
+    - /var/run/docker.sock:/tmp/docker.sock:ro
+    labels:
+      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: ""
+
+  lets_encrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: lets_encrypt
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "20"
+    volumes_from:
+    - nginx_proxy
+    volumes:
+    - /var/nginx/certs:/etc/nginx/certs:rw
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  socat:
+    image: alpine/socat
+    ports:
+    - "8443"
+    container_name: socat
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "20"
+    command: TCP-LISTEN:8443,fork TCP:access-gateway:8443
+    env_file:
+    - ./socat.env
+
+volumes:
+  data:
+    driver: local
