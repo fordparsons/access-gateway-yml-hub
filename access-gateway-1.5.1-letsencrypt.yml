@@ -37,7 +37,7 @@ services:
         max-file: "20"
     volumes:
     - /var/nginx/certs:/etc/nginx/certs:ro
-    - /var/nginx/vhost.d:/etc/nginx/vhost.d
+    - ./vhost.d:/etc/nginx/vhost.d
     - /usr/share/nginx/html
     - /var/run/docker.sock:/tmp/docker.sock:ro
     labels:
